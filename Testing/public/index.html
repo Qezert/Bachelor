@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sensor Prototype</title>
+  <style>
+    body { transition: background-color 0.3s; font-family: sans-serif; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>Shake Detection Demo</h1>
+  <p>Ryst din telefon for at få skærmen til at skifte farve.</p>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    // Unique ID for this device
+    // Could improve flow to not set deviceId if already set
+    const deviceId = localStorage.getItem("deviceId") || crypto.randomUUID();
+    localStorage.setItem("deviceId", deviceId);
+
+    const sensorTopic = `iot/${deviceId}/sensor`;
+    const resultTopic = `iot/${deviceId}/result`;
+
+    // Hardcoded broker credentials because free tier and no sensitive data
+    // Allows me to avoid proxying credentials through backend
+    const client = mqtt.connect("wss://297c855daffc48bb8d335683b6907b85.s1.eu.hivemq.cloud:8884/mqtt", {
+      username: "hive.frontend.1",
+      password: "ThisIs69!APassword"
+    });
+
+    client.on("connect", () => {
+      console.log("MQTT connected");
+      client.subscribe(resultTopic);
+    });
+
+    client.on("message", (topic, message) => {
+      if (topic === resultTopic) {
+        const { success } = JSON.parse(message.toString());
+        document.body.style.backgroundColor = success ? "green" : "red";
+      }
+    });
+
+    // Request permission (required on iOS)
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener("devicemotion", handleMotion, true);
+          } else {
+            alert("Motion permission not granted");
+          }
+        }).catch(console.error);
+    } else {
+      // Android and/or unsupported iOS
+      window.addEventListener("devicemotion", handleMotion, true);
+    }
+
+    let lastSent = 0;
+
+    function handleMotion(event) {
+      const { accelerationIncludingGravity } = event;
+      if (!accelerationIncludingGravity) { 
+        console.log("Unable to access acceleration sensor.");
+        return;
+      }
+
+      const x = accelerationIncludingGravity.x || 0;
+      const y = accelerationIncludingGravity.y || 0;
+      const z = accelerationIncludingGravity.z || 0;
+
+      const magnitude = Math.sqrt(x*x + y*y + z*z);
+      const now = Date.now();
+
+      // Throttle: publish every 1s
+      if (now - lastSent > 1000) {
+        lastSent = now;
+        console.log("Publishing motion magnitude:", magnitude.toFixed(2));
+        client.publish(sensorTopic, magnitude.toString());
+      }
+    }
+  </script>
+</body>
+</html>
