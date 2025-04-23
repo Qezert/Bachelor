@@ -24,7 +24,7 @@
     // Allows me to avoid proxying credentials through backend
     const client = mqtt.connect("wss://297c855daffc48bb8d335683b6907b85.s1.eu.hivemq.cloud:8884/mqtt", {
       username: "hive.frontend.1",
-      password: "ThisIs69!APassword"
+      password: "ThisIs69!APassword",
     });
 
     client.on("connect", () => {
@@ -39,20 +39,28 @@
       }
     });
 
-    // Request permission (required on iOS)
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
-        .then(permissionState => {
-          if (permissionState === 'granted') {
-            window.addEventListener("devicemotion", handleMotion, true);
-          } else {
-            alert("Motion permission not granted");
-          }
-        }).catch(console.error);
-    } else {
-      // Android and/or unsupported iOS
-      window.addEventListener("devicemotion", handleMotion, true);
-    }
+    // Add a button to request motion permission on iOS
+    const permissionButton = document.createElement("button");
+    permissionButton.textContent = "Enable Motion Detection";
+    document.body.appendChild(permissionButton);
+
+    permissionButton.addEventListener("click", () => {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener("devicemotion", handleMotion, true);
+              permissionButton.remove(); // Remove button after permission is granted
+            } else {
+              alert("Motion permission not granted");
+            }
+          }).catch(console.error);
+      } else {
+        // Android and/or unsupported iOS
+        window.addEventListener("devicemotion", handleMotion, true);
+        permissionButton.remove(); // Remove button for non-iOS devices
+      }
+    });
 
     let lastSent = 0;
 
