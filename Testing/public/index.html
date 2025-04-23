@@ -106,15 +106,15 @@
     function handleMotion(event) {
       if (!isPublishing) return;
 
-      const { accelerationIncludingGravity } = event;
-      if (!accelerationIncludingGravity) { 
+      const { acceleration } = event;
+      if (!acceleration) { 
         console.log("Unable to access acceleration sensor.");
         return;
       }
 
-      const x = accelerationIncludingGravity.x || 0;
-      const y = accelerationIncludingGravity.y || 0;
-      const z = accelerationIncludingGravity.z || 0;
+      const x = acceleration.x || 0;
+      const y = acceleration.y || 0;
+      const z = acceleration.z || 0;
 
       const magnitude = Math.sqrt(x*x + y*y + z*z);
       const now = Date.now();
