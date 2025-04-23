@@ -122,7 +122,7 @@
       if (now - lastSent > 1000) {
         lastSent = now;
         console.log("Publishing motion magnitude:", magnitude.toFixed(2));
-        client.publish(sensorTopic, magnitude.toString());
+        client.publish(sensorTopic, magnitude.toFixed(2));
       }
     }
   </script>
