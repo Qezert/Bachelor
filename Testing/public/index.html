@@ -12,16 +12,12 @@
 
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script>
-    // Unique ID for this device
-    // Could improve flow to not set deviceId if already set
     const deviceId = localStorage.getItem("deviceId") || crypto.randomUUID();
     localStorage.setItem("deviceId", deviceId);
 
     const sensorTopic = `iot/${deviceId}/sensor`;
     const resultTopic = `iot/${deviceId}/result`;
 
-    // Hardcoded broker credentials because free tier and no sensitive data
-    // Allows me to avoid proxying credentials through backend
     const client = mqtt.connect("wss://297c855daffc48bb8d335683b6907b85.s1.eu.hivemq.cloud:8884/mqtt", {
       username: "hive.frontend.1",
       password: "ThisIs69!APassword",
@@ -39,10 +35,16 @@
       }
     });
 
-    // Add a button to request motion permission on iOS
     const permissionButton = document.createElement("button");
     permissionButton.textContent = "Enable Motion Detection";
     document.body.appendChild(permissionButton);
+
+    const toggleButton = document.createElement("button");
+    toggleButton.textContent = "Stop Publishing";
+    toggleButton.style.display = "none"; // Initially hidden
+    document.body.appendChild(toggleButton);
+
+    let isPublishing = true;
 
     permissionButton.addEventListener("click", () => {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -50,21 +52,29 @@
           .then(permissionState => {
             if (permissionState === 'granted') {
               window.addEventListener("devicemotion", handleMotion, true);
-              permissionButton.remove(); // Remove button after permission is granted
+              permissionButton.remove();
+              toggleButton.style.display = "inline-block"; // Show toggle button
             } else {
               alert("Motion permission not granted");
             }
           }).catch(console.error);
       } else {
-        // Android and/or unsupported iOS
         window.addEventListener("devicemotion", handleMotion, true);
-        permissionButton.remove(); // Remove button for non-iOS devices
+        permissionButton.remove();
+        toggleButton.style.display = "inline-block"; // Show toggle button
       }
+    });
+
+    toggleButton.addEventListener("click", () => {
+      isPublishing = !isPublishing;
+      toggleButton.textContent = isPublishing ? "Stop Publishing" : "Start Publishing";
     });
 
     let lastSent = 0;
 
     function handleMotion(event) {
+      if (!isPublishing) return;
+
       const { accelerationIncludingGravity } = event;
       if (!accelerationIncludingGravity) { 
         console.log("Unable to access acceleration sensor.");
@@ -78,7 +88,6 @@
       const magnitude = Math.sqrt(x*x + y*y + z*z);
       const now = Date.now();
 
-      // Throttle: publish every 1s
       if (now - lastSent > 1000) {
         lastSent = now;
         console.log("Publishing motion magnitude:", magnitude.toFixed(2));
