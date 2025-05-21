@@ -83,15 +83,15 @@
           .then(permissionState => {
             if (permissionState === 'granted') {
               window.addEventListener("devicemotion", handleMotion, true);
-              permissionButton.remove();
+              permissionButton.remove(); // Hide permission button
               toggleButton.style.display = "inline-block"; // Show toggle button
             } else {
               alert("Motion permission not granted");
             }
           }).catch(console.error);
-      } else {
+      } else { // Device does not support permission request - we try to access sensor 
         window.addEventListener("devicemotion", handleMotion, true);
-        permissionButton.remove();
+        permissionButton.remove(); // Hide permission button
         toggleButton.style.display = "inline-block"; // Show toggle button
       }
     });
@@ -112,14 +112,14 @@
         return;
       }
 
-      const x = acceleration.x || 0; // 0 in case no sensor
+      const x = acceleration.x || 0; // 0 as a fallback value
       const y = acceleration.y || 0;
       const z = acceleration.z || 0;
 
       const magnitude = Math.sqrt(x*x + y*y + z*z);
       const now = Date.now();
 
-      if (now - lastSent > 1000) {
+      if (now - lastSent > 1000) { // If more than a second has passed since last publishing
         lastSent = now;
         console.log("Publishing motion magnitude:", magnitude.toFixed(2));
         client.publish(sensorTopic, magnitude.toFixed(2));
